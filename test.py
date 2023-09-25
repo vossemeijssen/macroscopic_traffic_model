@@ -1,4 +1,4 @@
-from gunodov_functions import *
+from godunovfunctions import *
 from tqdm import tqdm
 
 # Settings
@@ -67,3 +67,20 @@ for timestep in tqdm(range(timesteps)):
     q = new_q
 
 plot_density(x, q)
+
+def correctfunction(x):
+    y = np.zeros_like(x)
+    for i in range(len(x)):
+        if x[i]<-0.5:
+            y[i] = 0.75
+        elif x[i]>0.5:
+            y[i] = 0.25
+        else:
+            y[i] = 0.5*(1-x[i])
+    return y
+plt.plot(x, correctfunction(x))
+
+
+
+plt.legend(["Godunov scheme h=0.001", "Godunov scheme h=0.01", "Exact solution"])
+plt.show()

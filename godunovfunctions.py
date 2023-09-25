@@ -39,5 +39,6 @@ class Linear(FR):
 # Plot functions
 def plot_density(x, q):
     assert len(q) == len(x)
-    plt.plot(x, q)
-    plt.show()
+    plt.plot(x, q, "-.")
+
+
