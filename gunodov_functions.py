@@ -10,7 +10,7 @@ class FR:
         self.q_max = 0
         self.f_max = 0
         pass
-    
+
     def f(self, q):
         pass
 
@@ -18,7 +18,7 @@ class FR:
         pass
 
     def find_max(self):
-        # Finds the unique solution u to f'(u) = 0 
+        # Finds the unique solution u to f'(u) = 0
         pass
 
 
@@ -28,16 +28,12 @@ class Linear(FR):
         self.qmax = 0.5
         self.fmax = self.f(0.5)
         pass
-    
+
     def f(self, q):
-        return q - q*q
-    
+        return q - q * q
+
     def f_der(self, q):
-        return 1 - 2*q
-
-
-
-
+        return 1 - 2 * q
 
 
 # Plot functions
