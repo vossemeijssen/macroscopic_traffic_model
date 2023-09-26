@@ -36,14 +36,10 @@ class Linear(FR):
         return 1 - 2 * q
 
 
-# Plot functions
-def plot_density(x, q):
-    assert len(q) == len(x)
-    plt.plot(x, q, "-.")
-
-
+# Godunov Scheme class, which handles the time steps
 class GodunovScheme():
-    def __init__(self, dx, q, fr: FR, periodic_BC=False) -> None:
+    def __init__(self, x, dx, q, fr: FR, periodic_BC=False) -> None:
+        self.x = x
         self.dx = dx
         self.q = q
         self.fr = fr
@@ -87,4 +83,6 @@ class GodunovScheme():
         self.q = new_q
 
 
+    def plotdensity(self, args=""):
+        plt.plot(self.x, self.q, args)
 

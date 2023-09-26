@@ -29,13 +29,13 @@ q[int(len(q) / 2) :] = 0.25
 fr = Linear()
 
 # Time loop
-GS = GodunovScheme(dx, q, fr, periodic_BC)
+GS = GodunovScheme(x, dx, q, fr, periodic_BC)
 
 timesteps = int(T / dt)
 for timestep in tqdm(range(timesteps)):
     GS.time_step(dt)
 
-plot_density(x, GS.q)
+GS.plotdensity()
 
 def correctfunction(x):
     y = np.zeros_like(x)
