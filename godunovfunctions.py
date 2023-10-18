@@ -27,7 +27,6 @@ class Linear(FR):
     def __init__(self) -> None:
         self.qmax = 0.5
         self.fmax = self.f(0.5)
-        pass
 
     def f(self, q):
         return q - q * q
@@ -36,11 +35,37 @@ class Linear(FR):
         return 1 - 2 * q
 
 
+# Data class for x and q (road layout)
+class RoadLayout():
+    def __init__(self, x) -> None:
+        self.x = x
+        self.xlen = len(x)
+        self.dx = np.zeros_like(x)  #dx[i] is the size of cell x[i]. Boundary cells are "half"
+        self.dx[0] = (self.x[1] - self.x[0]) / 2
+        self.dx[-1] = (self.x[-1] - self.x[-2]) / 2
+        for i in range(1, self.xlen - 1):
+            self.dx[i] = (self.x[i+1] - self.x[i-1]) / 2
+
+    @classmethod
+    def from_linspace(cls, start, stop, num):
+        x = np.linspace(start=start, stop=stop, num=num)
+        return cls(x)
+    
+    @classmethod
+    def from_arange(cls, start, stop, step):
+        x = np.arange(start=start, stop=stop, step=step)
+        return cls(x)
+
+
 # Godunov Scheme class, which handles the time steps
 class GodunovScheme():
-    def __init__(self, x, dx, q, fr: FR, periodic_BC=False) -> None:
-        self.x = x
-        self.dx = dx
+    def __init__(
+            self, 
+            road_layout: RoadLayout, 
+            q: np.array, 
+            fr: FR, 
+            periodic_BC=False) -> None:
+        self.road_layout = road_layout
         self.q = q
         self.fr = fr
         self.periodic_BC = periodic_BC  # if false: constant BC
@@ -48,7 +73,7 @@ class GodunovScheme():
     def time_step(self, dt):
         f = self.fr.f(self.q)
         f_der = self.fr.f_der(self.q)
-        xlen = len(self.q)
+        xlen = self.road_layout.xlen
 
         # Find all q* (or actually, find all f(q*))
         f_q_star = np.zeros_like(self.q)
@@ -72,17 +97,21 @@ class GodunovScheme():
         # Now that q* is known, we can calculate the new q values
         new_q = np.zeros_like(self.q)
         if self.periodic_BC:
-            for i in range(xlen):
-                new_q[i] = self.q[i] - dt / self.dx * (f_q_star[i] - f_q_star[(i - 1) % xlen])
+            # Periodic BC means q[imax] = q[0], they are the same point.
+            for i in range(1, xlen):
+                new_q[i] = self.q[i] - dt / self.road_layout.dx[i] * (f_q_star[i] - f_q_star[i - 1])
+            new_q[0] = new_q[-1]
         else:
             new_q[0] = self.q[0]
             new_q[-1] = self.q[-1]
             for i in range(1, xlen - 1):
-                new_q[i] = self.q[i] - dt / self.dx * (f_q_star[i] - f_q_star[i - 1])
+                new_q[i] = self.q[i] - dt / self.road_layout.dx[i] * (f_q_star[i] - f_q_star[i - 1])
 
         self.q = new_q
 
 
     def plotdensity(self, args=""):
-        plt.plot(self.x, self.q, args)
+        plt.plot(self.road_layout.x, self.q, args)
+        plt.xlabel("Length of the road")
+        plt.ylabel("Density")
 
