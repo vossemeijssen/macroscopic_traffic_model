@@ -43,18 +43,25 @@ class Smulders(FR):
         self.qj = qj
         self.qc = qc
         self.gamma = u0 * qc
+        if qj != -1:
+            self.find_max()
         pass
 
+    def single_u(self, q):
+        if q <= self.qc:
+            return self.u0 * (1 - q/self.qj)
+        else:
+            if q == 0:
+                return 0
+            return self.u0 * self.qc * (1/q - 1/self.qj)
+
     def u(self, q):
-        u = np.zeros_like(q)
-        for i in range(len(u)):
-            if q[i] <= self.qc:
-                u[i] = self.u0 * (1 - q[i]/self.qj)
-            else:
-                if q[i] == 0:
-                    u[i] = 0
-                u[i] = self.u0 * self.qc * (1/q[i] - 1/self.qj)
-        return u
+        if isinstance(q, np.ndarray):
+            u = np.zeros_like(q)
+            for i in range(len(u)):
+                u[i] = self.single_u(q[i])
+            return u
+        return self.single_u(q)
     
     def f(self, q):
         u = self.u(q)
@@ -67,8 +74,13 @@ class Smulders(FR):
     
     def find_max(self):
         # TODO Define the function that finds these values
-        self.q_max = 0
-        self.f_max = 0 
+        # max of q*u0*(1-q/qj) is q=0.5*qj:
+        if self.qc > 0.5 * self.qj:
+            self.q_max = 0.5 * self.qj
+            self.f_max = self.f(self.q_max)
+        else:
+            self.q_max = self.qc
+            self.f_max = self.f(self.q_max)
 
 
 # Data class for x and q (road layout)
