@@ -12,9 +12,11 @@ class FR:
         pass
 
     def f(self, q):
+        # Should be able to handle a np array
         pass
 
     def f_der(self, q):
+        # Should be able to handle a np array
         pass
 
     def find_max(self):
@@ -33,6 +35,40 @@ class Linear(FR):
 
     def f_der(self, q):
         return 1 - 2 * q
+        
+
+class Smulders(FR):
+    def __init__(self, u0=-1, qj=-1, qc=-1) -> None:
+        self.u0 = u0
+        self.qj = qj
+        self.qc = qc
+        self.gamma = u0 * qc
+        pass
+
+    def u(self, q):
+        u = np.zeros_like(q)
+        for i in range(len(u)):
+            if q[i] <= self.qc:
+                u[i] = self.u0 * (1 - q[i]/self.qj)
+            else:
+                if q[i] == 0:
+                    u[i] = 0
+                u[i] = self.u0 * self.qc * (1/q[i] - 1/self.qj)
+        return u
+    
+    def f(self, q):
+        u = self.u(q)
+        return q * u
+
+    def f_der(self, q):
+        # TODO Define this derivative
+        value = 1
+        return value
+    
+    def find_max(self):
+        # TODO Define the function that finds these values
+        self.q_max = 0
+        self.f_max = 0 
 
 
 # Data class for x and q (road layout)
