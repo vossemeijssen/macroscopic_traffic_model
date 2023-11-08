@@ -79,7 +79,7 @@ class Population(PopulationBase):
     def crossover(self, parents: np.array) -> np.array:
         offspring = np.empty(self.offspring_size)
         crossover_point = np.uint8(self.offspring_size[0] / 2)
-        for k in range(self.offspring_size[1]):
+        for k in range(self.offspring_size[0]):
             parent1_idx = k % parents.shape[0]
 
             # Index of the second parent to mate
@@ -93,7 +93,7 @@ class Population(PopulationBase):
         return offspring
 
     def mutate(self, offspring_crossover: np.array, ind_params: Dict, pop_params: Dict) -> np.array:
-        for idx in range(offspring_crossover.shape[1]):
+        for idx in range(offspring_crossover.shape[0]):
             # select randomly the gene where randomness is going to be added
             g = np.random.choice(range(offspring_crossover.shape[1]))
 

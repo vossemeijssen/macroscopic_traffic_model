@@ -73,7 +73,6 @@ class Smulders(FR):
         return value
     
     def find_max(self):
-        # TODO Define the function that finds these values
         # max of q*u0*(1-q/qj) is q=0.5*qj:
         if self.qc > 0.5 * self.qj:
             self.q_max = 0.5 * self.qj
