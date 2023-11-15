@@ -41,8 +41,8 @@ u = filtered["gem_snelheid"].values.reshape(-1, 1)
 def fitness(u0, qj, qc):
     FR = Smulders(u0, qj, qc)
     u_pred = FR.u(q)
-    if qc > qj:
-        return -np.linalg.norm(u_pred - u) * 2
+    if qc > qj or u0 < 0 or qj < 0 or qc < 0:
+        return -np.linalg.norm(u_pred - u) * 10
     else:
         return -np.linalg.norm(u_pred - u)
 
@@ -52,16 +52,19 @@ ind_parameters = {'lower_bound': 10,
                   'number_of_genes': 3}
 
 # Define parameter for the entire population
-pop_parameters = {'n_parents': 10,
+pop_parameters = {'n_parents': 2,
                   'offspring_size':(10, ind_parameters['number_of_genes']),
                   'mutation_mean': 0,
                   'mutation_sd': 10,
                   'size': 20}
 
+# Define initial population as Smulders would have wanted
+ind_values = [[110, 110, 27]] * pop_parameters["size"]
+
 # Instantiate an evolution
-evo = Evolution(pop_parameters, ind_parameters, fitness)
+evo = Evolution(pop_parameters, ind_parameters, fitness, ind_values)
 # Repeat evolution step 200 epochs
-epochs = 400
+epochs = 20
 # Record fitness history
 history = []
 u0_history = []

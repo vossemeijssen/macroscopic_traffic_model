@@ -40,8 +40,6 @@ class PopulationBase(ABC):
         pass
 
 
-
-
 class Population(PopulationBase):
     _SIZE_KEY = "size"
     _N_PARENTS_KEY = "n_parents"
@@ -135,13 +133,15 @@ class Evolution:
 
     def __init__(self, pop_parameters: Dict,
                  ind_parameters: Dict,
-                 fitness_function: Callable
+                 fitness_function: Callable,
+                 ind_values: Optional[List[np.array]] = None,
                  ):
         self.fitness = fitness_function
         self.population = Population(
             pop_parameters,
             ind_parameters,
-            fitness_function
+            fitness_function,
+            ind_values=ind_values
         )
         self.ind_parameters = ind_parameters
         self.pop_parameters = pop_parameters
