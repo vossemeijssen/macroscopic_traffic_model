@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from torch.nn.functional import relu, mse_loss
+import torch
+# import tqdm
 
 
 # functions
@@ -38,7 +41,7 @@ class Linear(FR):
         
 
 class Smulders(FR):
-    def __init__(self, u0=-1, qj=-1, qc=-1) -> None:
+    def __init__(self, u0=110., qj=140., qc=30.) -> None:
         self.u0 = u0
         self.qj = qj
         self.qc = qc
@@ -80,6 +83,41 @@ class Smulders(FR):
         else:
             self.q_max = self.qc
             self.f_max = self.f(self.q_max)
+
+    def fit(self, q, f, epochs, lr):
+        u0 = torch.tensor([[float(self.u0)]], requires_grad=True)
+        qj = torch.tensor([[float(self.qj)]], requires_grad=True)
+        qc = torch.tensor([[float(self.qc)]], requires_grad=True)
+
+        qs = torch.tensor(q, requires_grad=False) 
+        fs = torch.tensor(f, requires_grad=False)
+        us = torch.tensor(f / q, requires_grad=False)
+
+        history = []
+
+        optimizer = torch.optim.SGD([u0, qc, qj], lr=lr)
+        for _ in range(epochs):
+            
+            f_pred = u0 / qj * (qc * qj - qc * qc + (qc + qs - qj) * relu(qc - qs) - qc * relu(qs - qc) )
+            loss = mse_loss(f_pred, fs)
+            # u_pred = f_pred / qs
+            # loss = mse_loss(u_pred, us)
+
+            history.append(float(loss))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            u0.grad.zero_()
+            qc.grad.zero_()
+            qj.grad.zero_()
+        
+        self.u0 = float(u0)
+        self.qj = float(qj)
+        self.qc = float(qc)
+
+        return history
 
 
 # Data class for x and q (road layout)

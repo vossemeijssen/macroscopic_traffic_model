@@ -50,15 +50,15 @@ device = (
     else "cpu"
 )
 
-u0 = torch.tensor([[100.]], requires_grad=True)
-qc = torch.tensor([[20.]], requires_grad=True)
-qj = torch.tensor([[100.]], requires_grad=True)
+u0 = torch.tensor([[110.]], requires_grad=True)
+qc = torch.tensor([[30.]], requires_grad=True)
+qj = torch.tensor([[140.]], requires_grad=True)
 
 qs = torch.tensor(q, requires_grad=False) 
 fs = torch.tensor(f, requires_grad=False) 
 us = torch.tensor(u, requires_grad=False)
 
-optimizer = torch.optim.SGD([u0, qc, qj], lr=0.8)
+optimizer = torch.optim.SGD([u0, qc, qj], lr=1)
 
 def fitness(u0, qj, qc):
     FR = Smulders(u0, qj, qc)
@@ -73,22 +73,24 @@ u0s = []
 qcs = []
 qjs = []
 
-epochs = 1000
+epochs = 10
 for _ in tqdm.tqdm(range(epochs)):
     f_pred = u0 / qj * (qc * qj - qc * qc + (qc + qs - qj) * relu(qc - qs) - qc * relu(qs - qc) )
     u_pred = f_pred / qs
     loss = mse_loss(f_pred, fs)
-    loss2 = mse_loss(u_pred, us)
+    # loss = mse_loss(u_pred, us)
 
-    history.append(float(loss2))
+    history.append(float(loss))
     # history.append(fitness(float(u0), float(qj), float(qc)))
     u0s.append(float(u0))
     qcs.append(float(qc))
     qjs.append(float(qj))
 
     optimizer.zero_grad()
-    loss2.backward()
+    loss.backward()
     optimizer.step()
+
+    print(u0, qc, qj)
 
     u0.grad.zero_()
     qc.grad.zero_()
