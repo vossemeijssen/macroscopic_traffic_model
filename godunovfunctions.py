@@ -200,3 +200,29 @@ class GodunovScheme():
         plt.xlabel("Length of the road")
         plt.ylabel("Density")
 
+
+def find_road_situation(hectometer, measure_time, MSI_df, max_speed=100, num_lanes=6):
+    lanedata = np.zeros(num_lanes)
+    for lane_nr in range(1, num_lanes+1):
+        # Find closest location
+        lane_df = MSI_df[MSI_df["Rijstrook"] == lane_nr]
+        if lane_df.empty:
+            lanedata[lane_nr - 1] = 0
+            continue
+        hm_points = lane_df.Hectometrering.unique()
+        closest_measuring_location = max(hm_points[hm_points <= hectometer])
+        # Only look at the closest location
+        lane_df = lane_df[lane_df.Hectometrering == closest_measuring_location]
+        # Find the latest update
+        latest_update_time = max(lane_df[lane_df.time <= measure_time].time)
+        beeldstand = lane_df[lane_df.time == latest_update_time]["Beeldstand"].values[0]
+        # Update lanedata according to beeldstand
+        if beeldstand in ["blank", "lane_closed_ahead merge_left", "lane_closed_ahead merge_right", "restriction_end"]:
+            lanedata[lane_nr - 1] = max_speed
+        elif beeldstand in ["lane_closed"]:
+            lanedata[lane_nr - 1] = 0
+        elif beeldstand.startswith("speedlimit"):
+            lanedata[lane_nr - 1] = int(beeldstand.split(" ")[-1])
+        else:
+            raise KeyError(f"Beeldstand {beeldstand} is not known.")
+    return(lanedata)
