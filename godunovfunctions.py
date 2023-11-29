@@ -201,18 +201,23 @@ class GodunovScheme():
         plt.ylabel("Density")
 
 
-def find_road_situation(hectometer, measure_time, MSI_df, max_speed=100, num_lanes=6):
+def find_road_situation(hectometer, measure_time, MSI_df, direction="R", max_speed=100, num_lanes=6):
     lanedata = np.zeros(num_lanes)
+    # Find closest location
+    loc_df = MSI_df[MSI_df["DVK"] == direction]
+    hm_points = loc_df.Hectometrering.unique()
+    if direction == "R": 
+        closest_measuring_location = max(hm_points[hm_points <= hectometer])
+    else:
+        closest_measuring_location = min(hm_points[hm_points >= hectometer])
+    # Only look at the closest location
+    loc_df = loc_df[loc_df["Hectometrering"] == closest_measuring_location]
     for lane_nr in range(1, num_lanes+1):
-        # Find closest location
-        lane_df = MSI_df[MSI_df["Rijstrook"] == lane_nr]
+        # If there is no lane_nr in the closest location, then there is no lane. Set speed 0.
+        lane_df = loc_df[loc_df["Rijstrook"] == lane_nr]
         if lane_df.empty:
             lanedata[lane_nr - 1] = 0
             continue
-        hm_points = lane_df.Hectometrering.unique()
-        closest_measuring_location = max(hm_points[hm_points <= hectometer])
-        # Only look at the closest location
-        lane_df = lane_df[lane_df.Hectometrering == closest_measuring_location]
         # Find the latest update
         latest_update_time = max(lane_df[lane_df.time <= measure_time].time)
         beeldstand = lane_df[lane_df.time == latest_update_time]["Beeldstand"].values[0]
