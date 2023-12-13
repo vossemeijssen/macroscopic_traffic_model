@@ -58,7 +58,7 @@ qs = torch.tensor(q, requires_grad=False)
 fs = torch.tensor(f, requires_grad=False) 
 us = torch.tensor(u, requires_grad=False)
 
-optimizer = torch.optim.SGD([u0, qc, qj], lr=1)
+optimizer = torch.optim.SGD([u0, qc, qj], lr=0.001)
 
 def fitness(u0, qj, qc):
     FR = Smulders(u0, qj, qc)
@@ -115,4 +115,6 @@ print("\nFinal u/q fitness:", fitness(float(u0), float(qj), float(qc)))
 plt.plot(history)
 # plt.ylim(-200, -140)
 plt.yscale("log")
+plt.ylabel("Loss")
+plt.xlabel("iterations")
 plt.show()
