@@ -148,16 +148,20 @@ class GodunovScheme():
             self, 
             road_layout: RoadLayout, 
             q: np.array, 
-            fr: FR, 
+            fr: FR | list[FR], 
             periodic_BC=False) -> None:
         self.road_layout = road_layout
         self.q = q
-        self.fr = fr
+        if isinstance(fr, FR):
+            self.fr = [fr] * (len(q))
+        else:
+            assert len(fr) == len(q)
+            self.fr = fr
         self.periodic_BC = periodic_BC  # if false: constant BC
     
     def time_step(self, dt):
-        f = self.fr.f(self.q)
-        f_der = self.fr.f_der(self.q)
+        f = [self.fr[i].f(self.q[i]) for i in range(len(self.q))]
+        f_der = [self.fr[i].f_der(self.q[i]) for i in range(len(self.q))]
         xlen = self.road_layout.xlen
 
         # Find all q* (or actually, find all f(q*))
@@ -177,7 +181,7 @@ class GodunovScheme():
                 else:
                     f_q_star[i] = f[(i + 1) % xlen]
             elif f_der[i] < 0 and f_der[(i + 1) % xlen] >= 0:
-                f_q_star[i] = self.fr.fmax            
+                f_q_star[i] = self.fr[i].fmax            
         
         # Now that q* is known, we can calculate the new q values
         new_q = np.zeros_like(self.q)
