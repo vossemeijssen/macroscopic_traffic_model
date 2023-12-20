@@ -1,9 +1,14 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from torch.nn.functional import relu, mse_loss
 import torch
-# import tqdm
+from torch import nn
+import torch.nn.functional as F
+from torch.nn.functional import relu, mse_loss
+import torch.optim as optim
+import os
+import tqdm
+from sklearn.model_selection import train_test_split
 
 
 # functions
@@ -95,7 +100,7 @@ class Smulders(FR):
 
         history = []
 
-        optimizer = torch.optim.SGD([u0, qc, qj], lr=lr)
+        optimizer = optim.SGD([u0, qc, qj], lr=lr)
         for _ in range(epochs):
             
             f_pred = u0 / qj * (qc * qj - qc * qc + (qc + qs - qj) * relu(qc - qs) - qc * relu(qs - qc) )
@@ -235,3 +240,176 @@ def find_road_situation(hectometer, measure_time, MSI_df, direction="R", max_spe
         else:
             raise KeyError(f"Beeldstand {beeldstand} is not known.")
     return(lanedata)
+
+
+def add_MSI_information(IS_loc_df, MSI_df, hectometer, direction, max_speed=100.0, num_lanes=6):
+    # In this function, IS_loc_df is the subset of IS_df with only the data of 1 location. 
+    # We will create num_lanes=6 empty columns of return_df, with the same number of rows as loc_df
+    return_df = pd.DataFrame()
+
+    # Find closest location, call it "closest_measuring_location"
+    dir_df = MSI_df[MSI_df["DVK"] == direction]
+    hm_points = dir_df.Hectometrering.unique()
+    try:
+        if direction == "R": 
+            closest_measuring_location = max(hm_points[hm_points <= hectometer])
+        else:
+            closest_measuring_location = min(hm_points[hm_points >= hectometer])
+    except ValueError:
+        print(f'ERROR: Matrix data unknown for measuring point {IS_loc_df["id_meetlocatie"].unique()[0]}\nat hectometer {hectometer}, direction {direction}.\nTry adding more MSI data.')
+        for lane_nr in range(1, num_lanes+1):
+            return_df[lane_nr] = [0] * len(IS_loc_df)
+        return return_df
+        # raise ValueError(f"Matrix data unknown for measuring point at hectometer {hectometer}.\nTry adding more MSI data.")
+    # Only look at the closest location
+    loc_df = dir_df[dir_df["Hectometrering"] == closest_measuring_location]
+    # print(loc_df)
+    # Define MSI configs:
+    MSIconfigs = {
+        "blank": max_speed,
+        "lane_closed_ahead merge_left": max_speed,
+        "lane_closed_ahead merge_right": max_speed,
+        "restriction_end": max_speed,
+        "lane_closed": 0,
+        "speedlimit 100": 100,
+        "speedlimit 80": 80,
+        "speedlimit 70": 70,
+        "speedlimit 60": 60, 
+        "speedlimit 50": 50,
+        "speedlimit 30": 30,
+    }
+
+    for lane_nr in range(1, num_lanes+1):
+        # If there is no lane_nr in the closest location, then there is no lane. 
+        # Set max speed equal to 0 for the whole time on this lane
+        lane_df = loc_df[loc_df["Rijstrook"] == lane_nr]
+        if lane_df.empty:
+            return_df[lane_nr] = [0] * len(IS_loc_df)
+            continue
+                
+        # Now, for every row in IS_loc_df, find the latest update time
+        change_times = lane_df.time
+        last_update_time = change_times.iloc[0]
+        last_update = MSIconfigs[lane_df[change_times == last_update_time]["Beeldstand"].values[0]]
+        next_update_time = change_times.iloc[1]
+        column = []
+        for measure_time in IS_loc_df["start"]:
+            if measure_time < next_update_time:
+                column.append(last_update)
+            else:
+                last_update_time = max(lane_df[change_times <= measure_time].time)
+                last_update = MSIconfigs[lane_df[change_times == last_update_time]["Beeldstand"].values[0]]
+                next_times = lane_df[change_times > measure_time].time
+                if next_times.empty:
+                    next_update_time = max(IS_loc_df.start)
+                else:
+                    next_update_time = min(next_times)
+                column.append(last_update)
+            # beeldstand = lane_df[change_times == latest_update_time]["Beeldstand"].values[0]
+            # column.append(MSIconfigs[beeldstand])
+        return_df[lane_nr] = column
+    return return_df
+
+
+def load_data(datafolder, print_logs=False):
+    # Define paths
+    datafolder_msi = os.path.join(datafolder, "msi-export")
+    msi_path = os.path.join(datafolder_msi, "msi-export.csv")
+    datafolder_intensityspeed = os.path.join(datafolder, "intensiteit-snelheid-export")
+    intensityspeed_path = os.path.join(datafolder_intensityspeed, "intensiteit-snelheid-export.csv")
+
+    # Load data
+    if print_logs:
+        print("Loading data")
+    IS_df = pd.read_csv(intensityspeed_path, low_memory=False)
+    MSI_df = pd.read_csv(msi_path, low_memory=False)
+
+    # Add columns
+    if print_logs:
+        print("Adding columns to IS and MSI data")
+    IS_df["gem_dichtheid"] = IS_df["gem_intensiteit"] / IS_df["gem_snelheid"]
+    MSI_df["time"] = pd.to_datetime(MSI_df["Datum en tijd beeldstandwijziging"])
+
+    # Filter out the relevant data in the intensity-speed df
+    IS_df = IS_df[IS_df.voertuigcategorie == "anyVehicle"]
+    IS_df = IS_df[IS_df.gem_snelheid != -1]
+    IS_df = IS_df[IS_df.technical_exclusion != "v"]    
+    IS_df["start"] = pd.to_datetime(IS_df.start_meetperiode)
+    mask = (IS_df.start.dt.time >= pd.to_datetime("7:00").time()) & (IS_df.start.dt.time < pd.to_datetime("19:00").time())
+    mask2 = (IS_df.start.dt.weekday != 5) & (IS_df.start.dt.weekday != 6)
+    IS_df = IS_df[mask & mask2]
+
+    # Aggregate the lanes together
+    filtered = IS_df[["start", "id_meetlocatie"]].drop_duplicates()
+    grouped = IS_df.groupby(["start", "id_meetlocatie"])
+    tot = grouped["gem_intensiteit"].transform("sum")
+    gem_snelheid_weighted = (IS_df["gem_snelheid"] / tot * IS_df["gem_intensiteit"]).groupby([IS_df["start"], IS_df["id_meetlocatie"]]).transform("sum")
+    filtered["gem_intensiteit"] = tot
+    filtered["gem_snelheid"] = gem_snelheid_weighted
+    filtered["gem_dichtheid"] = filtered["gem_intensiteit"] / filtered["gem_snelheid"]
+    IS_df = filtered
+
+    # Add direction and hectometer info to all rows of IS_df
+    direction_dict = {}
+    hectometer_dict = {}
+    for i in IS_df.id_meetlocatie.unique():
+        if i[6:13] == "MONIBAS":
+            if i[14:18] == "0131":
+                direction_dict[i] = i[20].upper()
+                hectometer_dict[i] = int(i[21:25]) / 10
+        else:
+            raise NameError(f"Please clarify id {i}")
+        
+    # Get all MSI information on all IS_df locations    
+    IS_df = IS_df[IS_df["id_meetlocatie"] != "RWS01_MONIBAS_0131hrr0119ra"]
+    results = pd.DataFrame()
+    if print_logs:
+        print("Adding MSI information on all locations")
+        iteration_unit = tqdm.tqdm(IS_df["id_meetlocatie"].unique())
+    else:
+        iteration_unit = IS_df["id_meetlocatie"].unique()
+    for measuring_location in iteration_unit:
+        hectometer = hectometer_dict[measuring_location]
+        direction = direction_dict[measuring_location]
+        ret = add_MSI_information(IS_df[IS_df["id_meetlocatie"] == measuring_location], MSI_df, hectometer, direction)
+        results = pd.concat([results, ret])
+    
+    # Combine all MSI information on all IS_df locations into df
+    df = pd.concat([IS_df.reset_index(), results.reset_index()], axis=1)
+
+    return df
+
+
+class NeuralNetwork(nn.Module):
+    def __init__(self, lin_stack, bias_init_function, weights_init_function, *args, **kwargs) -> None:
+        super().__init__()
+        self.linear_stack = lin_stack
+        for fc1 in self.linear_stack:
+            if hasattr(fc1, "bias"):
+                bias_init_function(fc1.bias)
+            if hasattr(fc1, "weight"):
+                weights_init_function(fc1.weight)
+
+    
+    def forward(self, x):
+        fr_params = self.linear_stack(x[:, :6])
+        
+        u0 = fr_params[:, 0]
+        qj = fr_params[:, 1]
+        qc = fr_params[:, 2]
+
+        q = x[:, -1]
+
+        f_pred = u0 / qj * (qc * qj - qc * qc + (qc + q - qj) * F.relu(qc - q) - qc * F.relu(q - qc))
+        return F.relu(f_pred)
+    
+    # def _initialize_parameters(self):
+    #     for fc1 in self.linear_stack:
+    #         torch.nn.init.zeros_(fc1.bias)
+    #         torch.nn.init.xavier_uniform_(fc1.weight)
+    
+    def get_params(self, x):
+        fr_params = self.linear_stack(x[:, :-1])
+        return fr_params
+
+
