@@ -189,7 +189,7 @@ class GodunovScheme():
             self.fr = fr
         self.periodic_BC = periodic_BC  # if false: constant BC
     
-    def time_step(self, dt):
+    def time_step_old(self, dt):
         f = [self.fr[i].f(self.q[i]) for i in range(len(self.q)-1)]
         f.append(self.fr[-1].f(self.q[-1]))
         f_der = [self.fr[i].f_der(self.q[i]) for i in range(len(self.q)-1)]
@@ -230,7 +230,7 @@ class GodunovScheme():
 
         self.q = new_q
 
-    def time_step_2(self, dt):
+    def time_step(self, dt):
         new_q = np.zeros_like(self.q)
         fluxes = [
             self.fr[i].f_from_ql_qr(self.q[i], self.q[i+1]) 
@@ -238,7 +238,13 @@ class GodunovScheme():
             ]
         
         if self.periodic_BC:
-            raise NotImplementedError
+            for i in range(1, len(new_q) - 1):
+                new_q[i] = self.q[i] - dt / self.road_layout.dx[i] * (fluxes[i] - fluxes[i-1])
+            # We assume that the first and last point are the same, with size dx[0] + dx[-1]. 
+            b_size = self.road_layout.dx[0] + self.road_layout.dx[-1]
+            new_q_b = self.q[0] - dt / b_size * (fluxes[0] - fluxes[-1])
+            new_q[0] = new_q_b
+            new_q[-1] = new_q_b
         else:
             new_q[0] = self.q[0]
             new_q[-1] = self.q[-1]

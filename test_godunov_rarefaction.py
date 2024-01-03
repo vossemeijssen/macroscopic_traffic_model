@@ -28,7 +28,8 @@ q[int(len(q) / 2) :] = 0.25
 # q = 0.25 + 0.25 * np.exp(-0.01 * x**2)  # "Formation of a traffic jam"
 
 # Choose FR
-fr = Linear()
+# fr = Linear()
+fr = Smulders(u0=1, qj=1, qc=1)
 
 # Time loop
 GS = GodunovScheme(RL, q, fr, periodic_BC)
@@ -53,7 +54,8 @@ q[int(len(q) / 2) :] = 0.25
 # q = 0.25 + 0.25 * np.exp(-0.01 * x**2)  # "Formation of a traffic jam"
 
 # Choose FR
-fr = Linear()
+# fr = Linear()
+fr = Smulders(u0=1, qj=1, qc=1)
 
 # Time loop
 GS = GodunovScheme(RL, q, fr, periodic_BC)
