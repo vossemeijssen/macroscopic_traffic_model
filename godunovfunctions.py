@@ -35,8 +35,8 @@ class FR:
 # Linear fundamental relation
 class Linear(FR):
     def __init__(self) -> None:
-        self.qmax = 0.5
-        self.fmax = self.f(0.5)
+        self.q_max = 0.5
+        self.f_max = self.f(0.5)
 
     def f(self, q):
         return q - q * q
@@ -213,7 +213,7 @@ class GodunovScheme():
                 else:
                     f_q_star[i] = f[(i + 1) % xlen]
             elif f_der[i] < 0 and f_der[(i + 1) % xlen] >= 0:
-                f_q_star[i] = self.fr[i].fmax            
+                f_q_star[i] = self.fr[i].f_max            
         
         # Now that q* is known, we can calculate the new q values
         new_q = np.zeros_like(self.q)
