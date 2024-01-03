@@ -11,9 +11,10 @@ from tqdm import tqdm
 
 
 # Loading all data
-data_name = "short_highway"
-datafolder = os.path.join(os.getcwd(), "data", data_name)
-df = godunovfunctions.load_data(datafolder, print_logs=True)
+data_name = "a13_2_months"
+# datafolder = os.path.join(os.getcwd(), "data", data_name)
+# df = godunovfunctions.load_data(datafolder, print_logs=True)
+df = torch.load("gunodov_method/df_"+data_name+".pth")
 X_df = df[[1, 2, 3, 4, 5, 6, "gem_dichtheid"]]
 Y_df = df["gem_intensiteit"]
 
@@ -134,54 +135,19 @@ def train_and_save(
         f_object.close()
 
 
-possible_lin_stacks = [
-    nn.Sequential(
-        nn.Linear(6, 3),
-        nn.Softplus(),
-    ),
-    nn.Sequential(
-        nn.Linear(6, 10),
-        nn.Softplus(),
-        nn.Linear(10, 3),
-        nn.Softplus(),
-    ),
-    nn.Sequential(
-        nn.Linear(6, 20),
-        nn.Softplus(),
-        nn.Linear(20, 10),
-        nn.Softplus(),
-        nn.Linear(10, 3),
-        nn.Softplus(),
-    ),
-    nn.Sequential(
-        nn.Linear(6, 40),
-        nn.Softplus(),
-        nn.Linear(40, 20),
-        nn.Softplus(),
-        nn.Linear(20, 10),
-        nn.Softplus(),
-        nn.Linear(10, 3),
-        nn.Softplus(),
-    ),
-    nn.Sequential(
-        nn.Linear(6, 50),
-        nn.Softplus(),
-        nn.Linear(50, 40),
-        nn.Softplus(),
-        nn.Linear(40, 20),
-        nn.Softplus(),
-        nn.Linear(20, 10),
-        nn.Softplus(),
-        nn.Linear(10, 3),
-        nn.Softplus()
-    )
-]
+y_max_normalizers = [1000.0, 5000.0, 10000.0, 50000.0, 100000.0]
 
 setupcounter = 1
-for lin_stack in possible_lin_stacks:
+for y in y_max_normalizers:
     print(f"\nTraining and testing setup {setupcounter}")
-    train_and_save(model_linear_stack=lin_stack)
-    setupcounter += 1
+    train_and_save(Y_normalizer=y, epochs=30)
+    setupcounter += 1 
+
+
+
+
+
+
 
 
 # # Settings
