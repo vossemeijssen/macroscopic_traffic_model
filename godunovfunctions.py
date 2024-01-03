@@ -56,11 +56,13 @@ class Smulders(FR):
         pass
 
     def single_u(self, q):
-        if q <= self.qc:
+        if q > self.qj:
+            return 0
+        elif q <= 0:
+            return self.u0
+        elif q <= self.qc:
             return self.u0 * (1 - q/self.qj)
         else:
-            if q == 0:
-                return 0
             return self.u0 * self.qc * (1/q - 1/self.qj)
 
     def u(self, q):
@@ -75,10 +77,17 @@ class Smulders(FR):
         u = self.u(q)
         return q * u
 
+    def single_f(self, q):
+        u = self.single_u(q)
+        return q * u
+
     def f_der(self, q):
-        # TODO Define this derivative
-        value = 1
-        return value
+        if isinstance(q, np.ndarray):
+            raise NotImplementedError
+        if q < self.qc:
+            return self.u0 * (1 - 2 * q / self.qj)
+        else:
+            return self.u0 * self.qc * (1 - q / self.qj)
     
     def find_max(self):
         # max of q*u0*(1-q/qj) is q=0.5*qj:
@@ -123,9 +132,25 @@ class Smulders(FR):
         self.qc = float(qc)
 
         return history
+    
+    def f_from_ql_qr(self, ql, qr):
+        if ql <= self.q_max and qr <= self.q_max:
+            return self.single_f(ql)
+        if ql > self.q_max and qr > self.q_max:
+            return self.single_f(qr)
+        if ql <= self.q_max and qr > self.q_max:
+            fl = self.single_f(ql)
+            fr = self.single_f(qr)
+            s = (fl - fr) / (ql - qr)
+            if s >= 0:
+                return fl
+            else:
+                return fr
+        if ql > self.q_max and qr <= self.q_max:
+            return self.f_max
 
 
-# Data class for x and q (road layout)
+# Data class for x (road layout)
 class RoadLayout():
     def __init__(self, x) -> None:
         self.x = x
@@ -158,15 +183,17 @@ class GodunovScheme():
         self.road_layout = road_layout
         self.q = q
         if isinstance(fr, FR):
-            self.fr = [fr] * (len(q))
+            self.fr = [fr] * (len(q)-1)
         else:
-            assert len(fr) == len(q)
+            assert len(fr) == len(q)-1
             self.fr = fr
         self.periodic_BC = periodic_BC  # if false: constant BC
     
     def time_step(self, dt):
-        f = [self.fr[i].f(self.q[i]) for i in range(len(self.q))]
-        f_der = [self.fr[i].f_der(self.q[i]) for i in range(len(self.q))]
+        f = [self.fr[i].f(self.q[i]) for i in range(len(self.q)-1)]
+        f.append(self.fr[-1].f(self.q[-1]))
+        f_der = [self.fr[i].f_der(self.q[i]) for i in range(len(self.q)-1)]
+        f_der.append(self.fr[-1].f_der(self.q[-1]))
         xlen = self.road_layout.xlen
 
         # Find all q* (or actually, find all f(q*))
@@ -203,6 +230,22 @@ class GodunovScheme():
 
         self.q = new_q
 
+    def time_step_2(self, dt):
+        new_q = np.zeros_like(self.q)
+        fluxes = [
+            self.fr[i].f_from_ql_qr(self.q[i], self.q[i+1]) 
+            for i in range(len(self.fr))
+            ]
+        
+        if self.periodic_BC:
+            raise NotImplementedError
+        else:
+            new_q[0] = self.q[0]
+            new_q[-1] = self.q[-1]
+            for i in range(1, len(new_q) - 1):
+                new_q[i] = self.q[i] - dt / self.road_layout.dx[i] * (fluxes[i] - fluxes[i-1])
+        
+        self.q = new_q
 
     def plotdensity(self, args=""):
         plt.plot(self.road_layout.x, self.q, args)
@@ -272,11 +315,13 @@ def add_MSI_information(IS_loc_df, MSI_df, hectometer, direction, max_speed=100.
         "restriction_end": max_speed,
         "lane_closed": 0,
         "speedlimit 100": 100,
+        "speedlimit 90": 90,
         "speedlimit 80": 80,
         "speedlimit 70": 70,
         "speedlimit 60": 60, 
         "speedlimit 50": 50,
         "speedlimit 30": 30,
+        "unknown": max_speed
     }
 
     for lane_nr in range(1, num_lanes+1):
