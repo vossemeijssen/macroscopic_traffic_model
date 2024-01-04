@@ -253,11 +253,14 @@ class GodunovScheme():
         
         self.q = new_q
 
-    def plotdensity(self, args=""):
-        plt.plot(self.road_layout.x, self.q, args)
-        plt.xlabel("Length of the road")
-        plt.ylabel("Density")
-
+    def plotdensity(self, args="", ax_object=""):
+        if ax_object=="":
+            plt.plot(self.road_layout.x, self.q, args)
+            plt.xlabel("Length of the road")
+            plt.ylabel("Density")
+        else:
+            ax_object.plot(self.road_layout.x, self.q, args)
+            ax_object.set(xlabel='Length of the road', ylabel='Density')
 
 def find_road_situation(hectometer, measure_time, MSI_df, direction="R", max_speed=100, num_lanes=6):
     lanedata = np.zeros(num_lanes)
