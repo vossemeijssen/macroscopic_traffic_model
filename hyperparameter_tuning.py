@@ -14,7 +14,9 @@ from tqdm import tqdm
 data_name = "a13_2_months"
 # datafolder = os.path.join(os.getcwd(), "data", data_name)
 # df = godunovfunctions.load_data(datafolder, print_logs=True)
+# torch.save(df, "gunodov_method/df_a13_2_months.pth")
 df = torch.load("gunodov_method/df_"+data_name+".pth")
+df = df.dropna(subset=['gem_dichtheid'])
 X_df = df[[1, 2, 3, 4, 5, 6, "gem_dichtheid"]]
 Y_df = df["gem_intensiteit"]
 
@@ -135,12 +137,54 @@ def train_and_save(
         f_object.close()
 
 
-y_max_normalizers = [1000.0, 5000.0, 10000.0, 50000.0, 100000.0]
+lr = [1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+stacks = [
+    nn.Sequential(
+            nn.Linear(6, 3),
+            nn.Softplus(),
+    ),
+    nn.Sequential(
+            nn.Linear(6, 4),
+            nn.Softplus(),
+            nn.Linear(4, 3),
+            nn.Softplus(),
+    ),
+    nn.Sequential(
+            nn.Linear(6, 10),
+            nn.Softplus(),
+            nn.Linear(10, 4),
+            nn.Softplus(),
+            nn.Linear(4, 3),
+            nn.Softplus(),
+    ),
+    nn.Sequential(
+            nn.Linear(6, 20),
+            nn.Softplus(),
+            nn.Linear(20, 10),
+            nn.Softplus(),
+            nn.Linear(10, 4),
+            nn.Softplus(),
+            nn.Linear(4, 3),
+            nn.Softplus(),
+    ),
+    nn.Sequential(
+            nn.Linear(6, 40),
+            nn.Softplus(),
+            nn.Linear(40, 20),
+            nn.Softplus(),
+            nn.Linear(20, 10),
+            nn.Softplus(),
+            nn.Linear(10, 4),
+            nn.Softplus(),
+            nn.Linear(4, 3),
+            nn.Softplus(),
+    ),
+]
 
 setupcounter = 1
-for y in y_max_normalizers:
+for stack in stacks:
     print(f"\nTraining and testing setup {setupcounter}")
-    train_and_save(Y_normalizer=y, epochs=30)
+    train_and_save(model_linear_stack=stack, epochs=10)
     setupcounter += 1 
 
 
