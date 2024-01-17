@@ -10,12 +10,14 @@ import tqdm
 
 # ------- 1) Get correct data from csv -------
 # Define paths
-datafolder = os.path.join(os.getcwd(), "data", "short_highway")
+datafolder = os.path.join(os.getcwd(), "data", "a13_2_months")
 datafolder_intensityspeed = os.path.join(datafolder, "intensiteit-snelheid-export")
 file1_path = os.path.join(datafolder_intensityspeed, "intensiteit-snelheid-export.csv")
 
 # Create pd df
+print("loading data")
 file1 = pd.read_csv(file1_path)
+print("data loaded")
 file1["gem_dichtheid"] = file1["gem_intensiteit"] / file1["gem_snelheid"]
 
 # Filter the relevant rows from the raw data

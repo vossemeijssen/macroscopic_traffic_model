@@ -178,7 +178,7 @@ class GodunovScheme():
             self, 
             road_layout: RoadLayout, 
             q: np.array, 
-            fr: FR | list[FR], 
+            fr: FR | list[FR] = Smulders(), 
             periodic_BC=False) -> None:
         self.road_layout = road_layout
         self.q = q
@@ -451,6 +451,9 @@ class NeuralNetwork(nn.Module):
         u0 = fr_params[:, 0]
         qj = fr_params[:, 1]
         qc = fr_params[:, 2]
+
+        if torch.any(qj == 0):
+            print(x, "GIVES A QJ OF ZERO!! THIS IS NOT POSSIBLE")
 
         q = x[:, -1]
 
