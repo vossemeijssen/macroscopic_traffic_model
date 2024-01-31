@@ -8,7 +8,7 @@ xmax = 1
 xlen = 2001
 T = 2
 periodic_BC = False
-
+fig = plt.figure(figsize=(10, 6))
 # Set up variables
 # x = np.arange(
 #     start=  -1,

@@ -38,7 +38,8 @@ def train_and_save(
     lr = 0.01,
     epochs = 1000,
     batch_size = 1000,
-    k_folds = 5,):
+    k_folds = 5,
+    random_state = 42):
     # ----------- From here, the hyperparameter search loop starts -------------
     # Normalize data, create tensors and create dataloader
     X = (torch.tensor(X_df.values, dtype=torch.float32) - X_min_normalizer) / (X_max_normalizer - X_min_normalizer)
@@ -48,7 +49,7 @@ def train_and_save(
     # We will save all results in logging_data
     logging_data = []
 
-    kfold = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+    kfold = KFold(n_splits=k_folds, shuffle=True, random_state=random_state)
     for fold, (train_ids, test_ids) in enumerate(kfold.split(dataset)):
         train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
         test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
@@ -62,7 +63,7 @@ def train_and_save(
                         batch_size=batch_size, sampler=test_subsampler)
         
         # Set up model and optimizer
-        torch.manual_seed(42)
+        torch.manual_seed(random_state)
         model = godunovfunctions.NeuralNetwork(
             lin_stack=model_linear_stack,
             bias_init_function=bias_init_function,
@@ -138,6 +139,7 @@ def train_and_save(
 
 
 lr = [1.0, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+lrs = [1.0, 0.1, 0.01, 0.001, 0.0001]
 stacks = [
     nn.Sequential(
             nn.Linear(6, 3),
@@ -181,11 +183,49 @@ stacks = [
     ),
 ]
 
+weights_init_functions = [
+    nn.init.xavier_uniform_,
+    nn.init.xavier_normal_,
+    nn.init.kaiming_uniform_,
+    nn.init.kaiming_normal_,
+    nn.init.normal_,
+    nn.init.ones_,
+    nn.init.zeros_,
+    nn.init.orthogonal_,
+]
+
+random_states = [1, 2, 3, 4, 5]
 setupcounter = 1
-for stack in stacks:
-    print(f"\nTraining and testing setup {setupcounter}")
-    train_and_save(model_linear_stack=stack, epochs=10)
-    setupcounter += 1 
+
+for i in range(5):
+    for j in range(5):
+        lin_stack = stacks[i]
+        lr = lrs[j]
+        print(f"\nTraining and testing setup {setupcounter}")
+        train_and_save(
+            epochs=10, 
+            model_linear_stack=lin_stack,
+            lr=lr
+        )
+        setupcounter += 1 
+
+
+
+# for RS in random_states:
+#     print(f"\nTraining and testing setup {setupcounter}")
+#     train_and_save(
+#         epochs=30, 
+#         model_linear_stack=nn.Sequential(
+#             nn.Linear(6, 10),
+#             nn.Softplus(),
+#             nn.Linear(10, 4),
+#             nn.Softplus(),
+#             nn.Linear(4, 3),
+#             nn.Softplus(),
+#         ),
+#         random_state=RS
+#     )
+#     setupcounter += 1 
 
 
 

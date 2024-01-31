@@ -30,9 +30,9 @@ filtered = filtered[filtered.technical_exclusion != "v"]
 # filtered = filtered[filtered.gem_snelheid <= 150]
 
 filtered["start"] = pd.to_datetime(filtered.start_meetperiode)
-mask = (filtered.start.dt.time >= pd.to_datetime("7:00").time()) & (filtered.start.dt.time < pd.to_datetime("19:00").time())
-mask2 = (filtered.start.dt.weekday != 5) & (filtered.start.dt.weekday != 6)
-filtered = filtered[mask & mask2]
+# mask = (filtered.start.dt.time >= pd.to_datetime("7:00").time()) & (filtered.start.dt.time < pd.to_datetime("19:00").time())
+# mask2 = (filtered.start.dt.weekday != 5) & (filtered.start.dt.weekday != 6)
+# filtered = filtered[mask & mask2]
 
 q = filtered["gem_dichtheid"].values.reshape(-1, 1)
 u = filtered["gem_snelheid"].values.reshape(-1, 1)
@@ -66,7 +66,7 @@ ind_values = [[110, 110, 27]] * pop_parameters["size"]
 # Instantiate an evolution
 evo = Evolution(pop_parameters, ind_parameters, fitness, ind_values)
 # Repeat evolution step 200 epochs
-epochs = 20
+epochs = 1
 # Record fitness history
 history = []
 u0_history = []
@@ -85,11 +85,15 @@ print('Best individual:', evo.solution.best_individual)
 print('Fitness value of best individual:', evo.solution.best_score)
 
 best_FR = Smulders(*evo.solution.best_individual)
-plt.plot(q, u, ".", alpha=0.3)
+fig=plt.figure(figsize=(10, 6))
+plt.plot(q, u, ".", alpha=0.1)
 q_test = np.linspace(min(q), max(q), 100)
-plt.plot(q_test, best_FR.u(q_test))
+# plt.plot(q_test, best_FR.u(q_test))
 plt.xlabel("Density (cars / km)")
 plt.ylabel("Average speed (km / hr)")
+plt.title("2 months of speeds and intensity data for 1 measuring location")
+plt.ylim(bottom=0)
+plt.xlim(left=0)
 plt.show()
 
 

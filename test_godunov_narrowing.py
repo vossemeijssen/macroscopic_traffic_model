@@ -10,7 +10,7 @@ xmax = 2
 xlen = 2001
 f1 = Smulders(u0=1, qj=1, qc=1)
 f2 = Smulders(u0=1, qj=0.5, qc=0.5)
-
+fig = plt.figure(figsize=(10, 6))
 # Plot FRs
 if False:
     for i, f in enumerate([f1, f2]):
@@ -57,5 +57,10 @@ timesteps = int(4 / dt)
 for timestep in tqdm(range(timesteps)):
     GS.time_step(dt)
 GS.plotdensity(ax_object=axs[1, 1])
+
+axs[0, 0].legend(["T=0.5"])
+axs[0, 1].legend(["T=2"])
+axs[1, 0].legend(["T=4"])
+axs[1, 1].legend(["T=8"])
 
 plt.show()
